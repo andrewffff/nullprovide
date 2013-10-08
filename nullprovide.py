@@ -1,5 +1,6 @@
-''' nullprovide
+''' nullprovide -- Andrew's fork
 Copyright (c) 2012, timdoug (me@timdoug.com)
+Copyright (c) 2013, Andrew Francis (andrew@sullust.net)
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
