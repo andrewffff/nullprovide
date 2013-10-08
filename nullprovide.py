@@ -33,10 +33,11 @@ from bs4 import BeautifulSoup
 class NullProvide(object):
 
     def __init__(self, account_key, string_dates=False):
-        soup = BeautifulSoup(urllib2.urlopen('http://www.zerocater.com/menu/%s/' % account_key).read())
-        self.meals = []
+        text = urllib2.urlopen('http://www.zerocater.com/menu/%s/' % account_key).read()
+        self.soup = BeautifulSoup(text, "html5lib")
 
-        for menu in soup.findAll('div', 'menu'):
+        self.meals = []
+        for menu in self.soup.findAll('div', 'menu'):
             def parse_date():
                 time_raw = menu.find('div', 'header-time').text.split()
                 year, month, day = map(int, menu.attrs['data-date'].split('-'))
@@ -45,8 +46,57 @@ class NullProvide(object):
                 out = datetime.datetime(year, month, day, hour, minute)
                 return str(out) if string_dates else out
 
+            def rating_from_class(classes):
+                for x in xrange(10,51,10):
+                    if ('rating-%s' % (x,)) in classes:
+                        return x / 10
+                return None
+
+            def safe_text(elem):
+                text = elem.text if elem else ''
+                stripped = text.strip() if text else ''
+                return stripped if stripped else None
+
+            def parse_user_feedback(b):
+                if not b:
+                    return []
+
+                feedback = []
+                for comment in b.findAll('div', 'old-comment'):
+                    if comment.findAll('div', 'admin-name'):
+                        staff_comment = safe_text(comment.find('div', 'old-comment-body'))
+                        if feedback:
+                            feedback[-1]['staff_response'] = safe_text(comment.find('div', 'old-comment-body'))
+                    else:
+                        # Skip everything except the first, overall rating from someone
+                        user = comment.find('div', 'commenter-name')
+                        if user:
+                            feedback.append({'user': user.text.strip(),
+                                         'rating': rating_from_class(comment.find('span', 'rating-given')['class']),
+                                         'comment': safe_text(comment.find('div', 'old-comment-body')),
+                                         'staff_response': None})
+
+                return feedback
+
+            def parse_items(ul):
+                if not ul:
+                    return []
+
+                items = []
+                for li in ul.findAll('li', 'item'):
+                    name = safe_text(li.find('span', 'item-name'))
+                    details = li.findAll('div', 'item-description') + li.findAll('div', 'item-instructions')
+                    if name:
+                        items.append({'name': name})
+                        if details:
+                            items[-1]['details'] = "\n".join(safe_text(d) for d in details)
+
+                return items
+
             self.meals.append({'name': menu.find('div', 'order-name').text.strip(),
                                'restaurant': menu.find('div', 'vendor').text.strip(),
+                               'items': parse_items(menu.find('ul', 'item-list')),
+                               'feedback': parse_user_feedback(menu.find('div', 'old-comments-container')),
                                'date': parse_date()})
 
 
