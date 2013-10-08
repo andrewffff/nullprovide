@@ -45,7 +45,7 @@ class NullProvide(object):
                 out = datetime.datetime(year, month, day, hour, minute)
                 return str(out) if string_dates else out
 
-            self.meals.append({'name': menu.find('div', 'detail-view-header').text.strip(),
+            self.meals.append({'name': menu.find('div', 'order-name').text.strip(),
                                'restaurant': menu.find('div', 'vendor').text.strip(),
                                'date': parse_date()})
 
